@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hello IT/Dev Conference!</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      html {
+        font-size: 18px;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background: #efefef;
+        color: #4a4a4a;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+      ul#item-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      #app {
+        max-width: 40em;
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 1em;
+        padding-left: 1em;
+        padding-right: 1em;
+      }
+      h1 {
+        font-size: 1.5em;
+      }
+      input, button {
+        font-size: 1rem;
+        padding: .25rem;
+        max-width: 100%;
+      }
+      form#add-item {
+        margin-top: 1em;
+      }
+      li {
+        margin-bottom: 1em;
+      }
+      li span {
+        font-weight: bold;
+      }
+      admin {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h1>IT/Dev Conference Questions</h1>
+      <ul id="item-list">
+        loading...
+      </ul>
+      <form id="add-item">
+        <input type="text" placeholder="question" id="form-question" style="width: 15em;">
+        <input type="text" placeholder="name (optional)" id="form-author" style="width: 7em;">
+        <button type="submit">Ask Question</button>
+      </form>
+    </div>
+    <script>
+      const endpoint = '$INSERT_ENDPOINT_HERE'
+      const url = `${endpoint}/items`;
+      let items = []
+      let admin = (new URL(window.location.href).searchParams.get('admin'))
+
+      function updateList() {
+        document.getElementById('item-list').innerHTML = items.map(i => `
+        <li>
+          <span>Question:</span> ${i.question} ${i.author ? '&ndash;' + i.author : ''}
+          ${admin ? `
+          <form class="delete" style="display: inline" data-id="${i.id}">
+            <button type="submit">Delete</button>
+          </form>
+        ` : ''}
+        </li>
+        `).join('')
+        document.querySelectorAll('form.delete').forEach(el => {
+          el.addEventListener('submit', async function(e) {
+            e.preventDefault()
+            let id = this.getAttribute('data-id')
+            let response = await fetch(`${url}/${id}`, {
+              method: 'DELETE', // *GET, POST, PUT, DELETE, etc.
+              mode: 'cors',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            })
+
+            items.splice(items.findIndex(i => i.id === id), 1)
+            updateList()
+          })
+        })
+      }
+
+      async function getItems() {
+        try {
+          let response = await fetch(url, {
+            method: 'GET', // *GET, POST, PUT, DELETE, etc.
+            mode: 'cors',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+
+          let newItems = await response.json()
+
+          if (!newItems.length) {
+            document.getElementById('item-list').innerHTML = 'Sorry, looks like there are no items.'
+          }
+          items = newItems
+          updateList()
+        } catch(e) {
+          console.error(e)
+        }
+      }
+      
+      function addPostTrigger() {
+        document.getElementById('add-item').addEventListener('submit', async function(e) {
+          e.preventDefault();
+          let question = document.getElementById('form-question').value
+          let author = document.getElementById('form-author').value
+
+          if (!question) {
+            return alert('You have to ask a question!')
+          }
+
+          let data = {
+            question
+          }
+
+          if (author) {
+            data.author = author
+          }
+
+          let response = await fetch(url, {
+            body: JSON.stringify(data),
+            method: 'POST'
+          })
+          let newItem = await response.json()
+          items.push(newItem)
+
+          updateList()
+          this.reset()
+        })
+      }
+
+    // get items on page load
+    (async function() {
+      await getItems()
+      addPostTrigger()
+    })()
+    </script>
+  </body>
+</html>

@@ -1,0 +1,16 @@
+version: 0.1
+
+phases:
+  install:
+    commands:
+      - pip install --upgrade awscli
+  build:
+    commands:
+      - aws cloudformation package --template-file template.yaml --s3-bucket $BUILD_OUTPUT_BUCKET --output-template-file output.yaml
+  post_build:
+    commands:
+      - echo "build completed successfully"
+artifacts:
+  files:
+    - output.yaml
+  discard-paths: yes

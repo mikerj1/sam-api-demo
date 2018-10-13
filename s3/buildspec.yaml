@@ -1,0 +1,17 @@
+version: 0.1
+env:
+  parameter-store:
+    STACK_NAME: "STACK_NAME"
+    SITE_BUCKET: "SITE_BUCKET"
+    CLOUDFRONT_DIST_ID: "CLOUDFRONT_DIST_ID"
+phases:
+  install:
+    commands:
+      - pip install --upgrade awscli
+  build:
+    commands:
+      - cd s3 && ./bin/package.sh
+      - cd s3 && ./bin/deploy.sh
+  post_build:
+    commands:
+      - echo "build completed successfully"

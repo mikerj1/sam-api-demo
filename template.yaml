@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: A SAM template that deploys a serverless demo API.
+Globals:
+  Api:
+    Cors:
+      AllowMethods: "'*'"
+      AllowHeaders: "'*'"
+      AllowOrigin: "'*'"
+Resources:
+  ApiGatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+  ItemsTable:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      TableName: !Sub "${AWS::StackName}-ItemsTable"
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+  CreateItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-CreateItem'
+      CodeUri: ./lambda/createItem/
+      Handler: index.handler
+      Runtime: nodejs8.10
+      Timeout: 20
+      Policies:
+      - Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Resource: !GetAtt ItemsTable.Arn
+            Action:
+              - 'dynamodb:PutItem'
+      Environment:
+        Variables:
+          ITEMS_TABLE: !Ref ItemsTable
+      Events:
+        GetItems:
+          Type: Api
+          Properties:
+            Path: /items
+            Method: POST
+            RestApiId: !Ref ApiGatewayApi
+  GetItemsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-GetItems'
+      CodeUri: ./lambda/getItems/
+      Handler: index.handler
+      Runtime: nodejs8.10
+      Timeout: 20
+      Policies:
+      - Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Resource: !GetAtt ItemsTable.Arn
+            Action:
+              - 'dynamodb:Scan'
+      Environment:
+        Variables:
+          ITEMS_TABLE: !Ref ItemsTable
+      Events:
+        GetItems:
+          Type: Api
+          Properties:
+            Path: /items
+            Method: GET
+            RestApiId: !Ref ApiGatewayApi
+  DeleteItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-DeleteItem'
+      CodeUri: ./lambda/deleteItem/
+      Handler: index.handler
+      Runtime: nodejs8.10
+      Timeout: 20
+      Policies:
+      - Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Resource: !GetAtt ItemsTable.Arn
+            Action:
+              - 'dynamodb:DeleteItem'
+      Environment:
+        Variables:
+          ITEMS_TABLE: !Ref ItemsTable
+      Events:
+        GetItems:
+          Type: Api
+          Properties:
+            Path: /items/{id}
+            Method: DELETE
+            RestApiId: !Ref ApiGatewayApi
+Outputs:
+  ApiUrl:
+    Description: URL of your API endpoint
+    Value: !Sub 'https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiUrl'

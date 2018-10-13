@@ -1,0 +1,15 @@
+version: 0.1
+env:
+  parameter-store:
+    STACK_NAME: "STACK_NAME"
+phases:
+  install:
+    commands:
+      - pip install --upgrade awscli
+      - cd test && npm install 
+  build:
+    commands:
+      - cd test && ./bin/test.sh
+  post_build:
+    commands:
+      - echo "build completed successfully"
